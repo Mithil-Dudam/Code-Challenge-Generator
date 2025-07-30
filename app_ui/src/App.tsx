@@ -5,12 +5,6 @@ import Login from "./pages/Login";
 import PageNotFound from "./pages/PageNotFound";
 import { AppContextProvider } from "./pages/AppContext";
 import PrivateRoute from "./pages/PrivateRoute";
-import Categories from "./pages/Categories";
-import Products from "./pages/Products";
-import Menu from "./pages/Menu";
-import Add from "./pages/Add";
-import Cart from "./pages/Cart";
-import ViewProduct from "./pages/ViewProduct";
 
 function App() {
   return (
@@ -27,7 +21,7 @@ function App() {
               </PrivateRoute>
             }
           />
-          <Route
+          {/* <Route
             path="/categories"
             element={
               <PrivateRoute>
@@ -74,7 +68,7 @@ function App() {
                 <ViewProduct />
               </PrivateRoute>
             }
-          />
+          /> */}
           <Route path="*" element={<PageNotFound />} />
         </Routes>
       </Router>
