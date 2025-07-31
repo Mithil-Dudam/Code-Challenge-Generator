@@ -3,3 +3,8 @@ uvicorn
 psycopg2
 sqlalchemy
 pydantic
+langchain-ollama 
+langchain-community
+langchain
+langgraph
+python-multipart
