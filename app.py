@@ -1,86 +1,53 @@
-from fastapi import FastAPI, UploadFile, File, Form, status
+from fastapi import FastAPI, Form, status, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-
-from typing import Annotated
-from langgraph.graph import StateGraph, START, END
-from langgraph.graph.message import add_messages
-from typing_extensions import TypedDict
-from langchain_ollama import ChatOllama, OllamaEmbeddings
-from langchain_core.messages import HumanMessage, AIMessage
-from langchain_community.document_loaders import PyPDFLoader
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_core.documents import Document
-from langchain_core.prompts import ChatPromptTemplate
-from langchain.chains.combine_documents import create_stuff_documents_chain
-from langchain.chains import create_retrieval_chain
-from uuid import uuid4
-# import os, shutil, pandas as pd
-import time
+from langchain_ollama import ChatOllama
 import json
 
 app = FastAPI()
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
-# class State(TypedDict):
-#     messages:Annotated[list,add_messages]
-
-# difficulty = input("Enter difficulty: ")
-
 llm = ChatOllama(model="llama3.2",temperature=0.7)
-# prompt = f"""You are an expert coding challenge creator.
-#     Your task is to generate a coding question with multiple choice answers.
-#     The question should be appropriate for the specified difficulty level.
-#     Difficulty level: {difficulty}
-
-#     For easy questions: Focus on basic syntax, simple operations, or common programming concepts.
-#     For medium questions: Cover intermediate concepts like data structures, algorithms, or language features.
-#     For hard questions: Include advanced topics, design patterns, optimization techniques, or complex algorithms.
-
-#     Return the challenge in the following JSON structure:
-#     {{
-#         "title":"The coding question",
-#         "options":["Option 1","Option 2","Option 3","Option 4"],
-#         "correct_answer_id":0, //Index of the correct answer (0-3)
-#         "explanation":"Detailed explanation of the why the correct answer is right"
-#     }}
-
-#     Make sure the options are plausible but with only one clearly correct answer.
-    
-#     The value of "answer" should be a complete, valid Python solution.
-#     Do not define a function or print anything else before or after the dictionary.
-#     Do not wrap the dictionary inside any other code or structure.
-#     No explanations or additional formatting like markdown.
-#     """
-
-# result = llm.invoke(prompt)
-# print(result)
 
 @app.post("/generate",status_code=status.HTTP_200_OK)
 async def generate(difficulty:str = Form(...)):
-    prompt = f"""You are an expert coding challenge creator.
-    Your task is to generate a coding question with multiple choice answers.
-    The question should be appropriate for the specified difficulty level.
-    Difficulty level: {difficulty}
+    prompt = f"""You are an expert coding challenge generator.
 
-    For easy questions: Focus on basic syntax, simple operations, or common programming concepts.
-    For medium questions: Cover intermediate concepts like data structures, algorithms, or language features.
-    For hard questions: Include advanced topics, design patterns, optimization techniques, or complex algorithms.
+    Your task is to create one multiple-choice coding question suitable for a {difficulty}-level computer science interview.
 
-    Return the challenge in the following JSON structure:
+    Guidelines based on difficulty:
+    - Easy: Focus on basic syntax, simple operations, or common programming concepts.
+    - Medium: Include intermediate topics like data structures, algorithms, or core language features.
+    - Hard: Cover advanced topics such as optimization, design patterns, or complex algorithmic problems.
+
+    VERY IMPORTANT:
+    You must respond with a **valid JSON object** only — do NOT include code snippets, markdown, explanations, or any extra text.
+
+    The response must strictly follow this format:
     {{
-        "title":"The coding question",
-        "options":["Option 1","Option 2","Option 3","Option 4"],
-        "correct_answer_id":0, //Index of the correct answer (0-3)
-        "explanation":"Detailed explanation of the why the correct answer is right"
+    "title": "Your question goes here",
+    "options": ["Option A", "Option B", "Option C", "Option D"],
+    "correct_answer_id": 0, 
+    "explanation": "A clear explanation why the selected option is correct"
     }}
 
-    Make sure the options are plausible but with only one clearly correct answer.
-
-    The value of "answer" should be a complete, valid Python solution.
-    Do not define a function or print anything else before or after the dictionary.
-    Do not wrap the dictionary inside any other code or structure.
-    No explanations or additional formatting like markdown.
+    Rules:
+    - The options must be **realistic, distinct and plausible**, with only **one correct answer**.
+    - `correct_answer_id` must be the index (0 to 3) of the correct option.
+    - The explanation must be accurate, concise, and aligned with the correct answer.
+    - DO NOT wrap the JSON in triple backticks, functions, or any formatting.
+    - DO NOT prepend or append any text. Output only the raw JSON structure.
+    - Ensure the correct answer is **logically accurate**.
+    - Do not return incorrect or irrelevant options as correct.
+    - All options must be realistic, code-based answers to the question.
+    - Do NOT reference options (like "Option A") inside the options themselves.
+    - Do NOT use meta-descriptions or commentary.
+    - Each option must be a possible solution, algorithm, or approach.
+    - Double-check that the correct option solves the problem as described in the "title".
     """
+
     result = llm.invoke(prompt)
     print(result)
-    return json.loads(result.content)
+    try:
+            return json.loads(result.content)
+    except json.JSONDecodeError as e:
+            raise HTTPException(status_code=500,detail=f"Invalid JSON from model: {e}")
